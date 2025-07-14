@@ -1,11 +1,11 @@
+// login.js 맨 위에 추가
+window.isSignupMode = false;
+
 function isValidPassword(pw) {
   // 8자 이상 + 대문자 + 소문자 + 숫자 + 특수문자 (영문 이외 문자 ❌)
   const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+=\[\]{};':"\\|,.<>/?-])[A-Za-z\d!@#$%^&*()_+=\[\]{};':"\\|,.<>/?-]{8,}$/;
   return pattern.test(pw);
 }
-
-// login-debug.js (로그 추적 전용 버전)
-let isSignupMode = false;
 
 // ✅ Firebase 객체 선언
 const auth = firebase.auth();
@@ -58,8 +58,12 @@ export async function firebaseLogin(email, password) {
   try {
     const userCred = await auth.signInWithEmailAndPassword(email, password);
 
-
-    
+    // ✅ 여기에서 인증 여부 확인
+    if (!userCred.user.emailVerified) {
+      await auth.signOut();
+      alert("이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.");
+      return;
+    }
 
     console.log("✅ 로그인 성공:", userCred.user.uid);
 
@@ -165,7 +169,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 폼 처리
+// ✅ 3. 폼 처리 함수 - 여기는 수정 필요
 export function handleAuth(event) {
   console.log("🟢 handleAuth() 호출됨");
   event.preventDefault?.();
@@ -178,9 +182,14 @@ export function handleAuth(event) {
     return;
   }
 
-  if (isSignupMode) {
+
+  console.log("👉 현재 모드:", window.isSignupMode ? "회원가입" : "로그인");
+
+  if (window.isSignupMode) {
     firebaseSignup(email, password);
   } else {
     firebaseLogin(email, password);
   }
 }
+
+window.isSignupMode = false;

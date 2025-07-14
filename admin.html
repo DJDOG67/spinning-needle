@@ -6,13 +6,14 @@
   <link rel="stylesheet" href="style/main.css" />
 </head>
 <body>
+  <!-- 🔒 관리자 권한 체크 -->
   <script>
-  const role = localStorage.getItem("userRole");
-  if (role !== "admin") {
-    alert("⚠️ 관리자 전용 페이지입니다.");
-    location.href = "index.html";
-  }
-</script>
+    const role = localStorage.getItem("userRole");
+    if (role !== "admin") {
+      alert("⚠️ 관리자 전용 페이지입니다.");
+      location.href = "index.html";
+    }
+  </script>
 
   <h1>🛠️ 관리자 대시보드</h1>
 
@@ -26,9 +27,18 @@
     </ul>
   </section>
 
-  <!-- 🔹 유저 목록 -->
+  <!-- 🔎 검색창 (UX 개선 위치로 이동) -->
   <section class="admin-section">
     <h2>👥 유저 권한 관리</h2>
+
+    <input
+      type="search"
+      id="searchInput"
+      placeholder="닉네임으로 검색하세요"
+      autocomplete="on"
+      style="padding: 10px; margin-bottom: 12px; width: 300px; font-size: 1rem;"
+    />
+
     <table id="userTable">
       <thead>
         <tr>
@@ -40,16 +50,19 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <!-- 🔁 페이지네이션 위치 바로 아래에 -->
+    <div id="pagination" style="margin-top: 16px;"></div>
   </section>
 
-  <!-- 🔹 공지 등록 -->
+  <!-- 📢 공지 등록 -->
   <section class="admin-section">
     <h2>📢 공지 등록</h2>
     <textarea id="noticeText" rows="4" cols="60" placeholder="공지사항 내용을 입력하세요"></textarea><br />
-    <button onclick="submitNotice()">등록</button>
+    <button id="submitNoticeBtn">등록</button>
   </section>
 
+  <!-- 📦 JS 모듈 로드 -->
   <script type="module" src="script/admin.js"></script>
-  
 </body>
 </html>

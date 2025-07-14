@@ -204,7 +204,14 @@
       <h2 id="modalTitle">로그인</h2>
       <form id="authForm" onsubmit="handleAuth(event)">
         <div class="input-group">
-          <input type="email" id="authUsername" placeholder="이메일 주소 (example@gmail.com)" required />
+          <input
+  type="email"
+  id="authUsername"
+  placeholder="이메일 주소 (example@gmail.com)"
+  required
+  autocomplete="username"
+/>
+
         </div>
         <div class="input-group">
           <input type="password" id="authPassword" placeholder="비밀번호" required autocomplete="current-password">
@@ -231,9 +238,11 @@ import {
   saveProfileLocally
 } from './script/login.js';
 
+// ✅ 여기 추가하세요!
+window.toggleAuthMode = toggleAuthMode;
+
 // ✅ 전역 등록 (HTML에서 onsubmit, onclick에서 호출 가능하도록)
 window.handleAuth = handleAuth;
-window.toggleAuthMode = toggleAuthMode;
 window.firebaseLogout = firebaseLogout;
 window.resendVerificationEmail = resendVerificationEmail;
 window.saveProfileLocally = saveProfileLocally;
@@ -265,17 +274,23 @@ window.saveProfileLocally = saveProfileLocally;
   window.showLogin = showLogin;
   window.showSignup = showSignup;
   window.closeModal = closeModal;
-  window.toggleAuthMode = toggleAuthMode;
-  window.handleAuth = handleAuth;
-  window.firebaseLogout = firebaseLogout;
-  window.resendVerificationEmail = resendVerificationEmail;
-  window.saveProfileLocally = saveProfileLocally;
 
   // 로그인 버튼 연결
-  document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("loginBtn")?.addEventListener("click", showLogin);
-    document.getElementById("signupBtn")?.addEventListener("click", showSignup);
-  });
+ document.addEventListener("DOMContentLoaded", () => {
+
+// 로그인 버튼
+document.getElementById("loginBtn")?.addEventListener("click", () => {
+  // 로그인 모드로 강제 설정
+  if (window.toggleAuthMode && window.isSignupMode) window.toggleAuthMode();
+  showLogin();
+});
+
+// ✅ 회원가입 버튼
+document.getElementById("signupBtn")?.addEventListener("click", () => {
+  if (!window.isSignupMode) window.toggleAuthMode(); // ✅ 모드 전환
+  showSignup(); // 모달 열기
+});
+});
 
   // 유저 메뉴 토글
   document.addEventListener("DOMContentLoaded", () => {

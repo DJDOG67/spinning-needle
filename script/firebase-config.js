@@ -7,12 +7,20 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
 import {
   getFirestore,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  addDoc,
+  getDocs,
+  Timestamp,
+  collection,
+  updateDoc   // ✅ 이 줄 추가
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+
 
 // 🔐 Firebase 설정
 const firebaseConfig = {
@@ -29,10 +37,27 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore();
 
-export { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, setDoc, getDoc };
+// ⬇️ 이 부분을 파일 맨 아래에 추가하세요!
+export {
+  auth,
+  db,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  doc,
+  setDoc,
+  getDoc,
+  addDoc,
+  getDocs,
+  Timestamp,
+  collection,
+  updateDoc      // ✅ 이 줄도 추가!
+};
+
+
 
 export async function firebaseLogout() {
-  await firebase.auth().signOut(); // 또는 signOut(auth);
+  await signOut(auth); // ✅ signOut(auth)로 수정 추천
   localStorage.removeItem("loggedInUser");
   localStorage.removeItem("userRole");
   localStorage.removeItem("profileURL");
