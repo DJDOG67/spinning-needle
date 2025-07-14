@@ -5,6 +5,24 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script>
+  // ✅ Firebase 구성 및 초기화
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoHzGz-LwC4LepI6bd5dywKifmttdWNqw",
+    authDomain: "auth-fd684.firebaseapp.com",
+    projectId: "auth-fd684",
+    storageBucket: "auth-fd684.appspot.com",
+    messagingSenderId: "175064845831",
+    appId: "1:175064845831:web:fb7fa3600173c4c9e79915"
+  };
+
+  // ✅ 꼭 초기화해야 Firebase 작동함
+  firebase.initializeApp(firebaseConfig);
+
+  // ✅ 인증과 DB를 전역에서 쓸 수 있게 등록
+  window.auth = firebase.auth();
+  window.db = firebase.firestore();
+</script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -189,7 +207,7 @@
           <input type="email" id="authUsername" placeholder="이메일 주소 (example@gmail.com)" required />
         </div>
         <div class="input-group">
-          <input type="password" id="authPassword" placeholder="비밀번호" required />
+          <input type="password" id="authPassword" placeholder="비밀번호" required autocomplete="current-password">
         </div>
         <button type="submit" class="btn-neon-wide">입장하기</button>
       </form>
@@ -205,14 +223,20 @@
   </div>
 
 <script type="module">
-  import {
-    toggleAuthMode,
-    handleAuth,
-    firebaseLogout,
-    resendVerificationEmail,
-    saveProfileLocally
-  } from './script/login.js';
+import {
+  toggleAuthMode,
+  handleAuth,
+  firebaseLogout,
+  resendVerificationEmail,
+  saveProfileLocally
+} from './script/login.js';
 
+// ✅ 전역 등록 (HTML에서 onsubmit, onclick에서 호출 가능하도록)
+window.handleAuth = handleAuth;
+window.toggleAuthMode = toggleAuthMode;
+window.firebaseLogout = firebaseLogout;
+window.resendVerificationEmail = resendVerificationEmail;
+window.saveProfileLocally = saveProfileLocally;
   // 함수 선언
   function showLogin() {
     const modal = document.getElementById("authModal");

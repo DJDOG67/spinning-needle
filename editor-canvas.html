@@ -11,6 +11,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <script>
+  const role = localStorage.getItem("userRole");
+  if (role !== "curator" && role !== "admin") {
+    alert("⚠️ 이 페이지는 큐레이터만 접근할 수 있습니다.");
+    location.href = "index.html";
+  }
+</script>
+
   <header class="editor-header">
     <h1>📝 매거진 작성</h1>
     <button onclick="saveDraft()">💾 임시 저장</button>

@@ -6,6 +6,14 @@
   <link rel="stylesheet" href="style/main.css" />
 </head>
 <body>
+  <script>
+  const role = localStorage.getItem("userRole");
+  if (role !== "admin") {
+    alert("⚠️ 관리자 전용 페이지입니다.");
+    location.href = "index.html";
+  }
+</script>
+
   <h1>🛠️ 관리자 대시보드</h1>
 
   <!-- 🔹 통계 -->
