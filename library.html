@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>디지털 도서관</title>
+  <link rel="stylesheet" href="style/main.css" />
+</head>
+<body>
+
+  <!-- ☰ 햄버거 메뉴 -->
+  <div class="hamburger" onclick="toggleFilter()">☰</div>
+
+  <!-- 🔍 필터 패널 -->
+  <aside class="filter-panel" id="filterPanel">
+    <h3>🔍 필터</h3>
+
+    <div class="filter-group">
+      <p>🎼 장르</p>
+      <button onclick="filterTag('Jazz')">Jazz</button>
+      <button onclick="filterTag('Rock')">Rock</button>
+      <button onclick="filterTag('Experimental')">Experimental</button>
+    </div>
+
+    <div class="filter-group">
+      <p>🕰 시대</p>
+      <button onclick="filterTag('60s')">60s</button>
+      <button onclick="filterTag('70s')">70s</button>
+      <button onclick="filterTag('80s')">80s</button>
+    </div>
+
+    <div class="filter-group">
+      <p>🌍 국가</p>
+      <button onclick="filterTag('USA')">USA</button>
+      <button onclick="filterTag('UK')">UK</button>
+      <button onclick="filterTag('Korea')">Korea</button>
+    </div>
+
+    <button onclick="resetFilter()" class="btn-mini">필터 초기화</button>
+  </aside>
+
+  <!-- 🎨 상단 타이틀 -->
+  <section class="library-hero">
+    <h1>디지털 감성 도서관</h1>
+    <a href="index.html" class="btn-mini">← 홈으로</a>
+  </section>
+
+  <!-- 📚 카드 그리드 영역 -->
+  <section class="library-grid">
+    <div class="grid" id="card-container">
+      <!-- Firebase에서 불러온 카드들이 자동 삽입됨 -->
+    </div>
+  </section>
+
+  <!-- 🔌 Firebase 연동 스크립트 -->
+  <script type="module" src="script/library.js"></script>
+<!-- 🔐 로그인/회원가입 모달 -->
+<div id="authModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <h2 id="modalTitle">로그인</h2>
+
+    <input type="text" id="authUsername" placeholder="아이디 (닉네임)" />
+    <input type="password" id="authPassword" placeholder="비밀번호" />
+
+    <button class="btn-neon" onclick="handleAuth()">확인</button>
+    <p class="toggle-text">
+      계정이 없으신가요?
+      <span onclick="toggleAuthMode()">회원가입</span>
+    </p>
+
+    <p id="authMessage"></p>
+  </div>
+</div>
+<script type="module" src="script/library.js"></script>
+<script src="script/login.js"></script>
+</body>
+</html>

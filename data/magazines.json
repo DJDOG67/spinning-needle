@@ -1,0 +1,26 @@
+[
+{
+  "title": "Sun Ra – Space Is the Place",
+  "cover": "assets/img/sunra.jpg",
+  "curator": "Hide_Kim",
+  "tags": ["Jazz", "USA", "70s"],
+  "description": "Sun Ra의 대표작이자 우주적 아방가르드 재즈의 결정체. 그는 음악을 통해 현실을 초월한 흑인 해방의 세계를 제시했다. 본 앨범은 그의 신화적 사운드 철학이 집약된 걸작이며, 영적인 블루노트와 실험적 혼돈이 공존한다.",
+  "music": "https://open.spotify.com/embed/album/2WeCGrYJt8fq2h01xStPfU"
+},
+  {
+    "title": "Talk Talk – Spirit of Eden",
+    "cover": "assets/img/talktalk.jpg",
+    "curator": "Echo_Reed",
+    "tags": ["Art Rock", "UK", "80s"],
+    "description": "Sun Ra의 대표작이자 우주적 아방가르드 재즈의 결정체. 그는 음악을 통해 현실을 초월한 흑인 해방의 세계를 제시했다. 본 앨범은 그의 신화적 사운드 철학이 집약된 걸작이며, 영적인 블루노트와 실험적 혼돈이 공존한다.",
+    "music": "https://open.spotify.com/embed/album/2WeCGrYJt8fq2h01xStPfU"
+},
+  {
+    "title": "Velvet Underground – Noise as a Drug",
+    "cover": "assets/img/velvet.jpg",
+    "curator": "ShadowFox",
+    "tags": ["Experimental", "USA", "60s"],
+    "description": "Sun Ra의 대표작이자 우주적 아방가르드 재즈의 결정체. 그는 음악을 통해 현실을 초월한 흑인 해방의 세계를 제시했다. 본 앨범은 그의 신화적 사운드 철학이 집약된 걸작이며, 영적인 블루노트와 실험적 혼돈이 공존한다.",
+    "music": "https://open.spotify.com/embed/album/2WeCGrYJt8fq2h01xStPfU"
+}
+]

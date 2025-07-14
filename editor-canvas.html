@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- 꼭 <script type="module"> 위에 있어야 함 -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spinning Needle Editor</title>
+  <link rel="stylesheet" href="style/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="editor-header">
+    <h1>📝 매거진 작성</h1>
+    <button onclick="saveDraft()">💾 임시 저장</button>
+    <button onclick="publishMagazine()">✅ 발행</button>
+  </header>
+
+  <div class="editor-wrapper">
+    <!-- 🧰 툴바 -->
+    <aside class="editor-toolbar">
+      <button onclick="addTextBox()">🅰 텍스트</button>
+      <button onclick="addImage()">🖼 이미지</button>
+      <input type="file" id="imgUpload" accept="image/*" style="display: none;" />
+      <button onclick="addShape('line')">➖ 선</button>
+      <button onclick="addShape('rect')">▭ 사각형</button>
+      <button onclick="addShape('circle')">⚪ 원</button>
+      <button onclick="addShape('triangle')">🔺 삼각형</button>
+      <button onclick="addPolygon()">⬠ 다각형</button>
+      <button onclick="undoAction()">↩️ Undo</button>
+      <button onclick="redoAction()">↪️ Redo</button>
+      <button onclick="previewMagazine()">👁 프리뷰</button>
+    </aside>
+
+    <!-- ✍️ 캔버스 영역 -->
+    <section class="editor-canvas" id="canvas">
+      <div class="canvas-area" id="editorContent" tabindex="0">
+        <!-- 요소들이 여기에 생성됨 -->
+      </div>
+    </section>
+
+    <!-- 🎛️ 속성 패널 -->
+    <aside class="editor-properties" id="propertyPanel">
+      <div id="canvasSizeControls" style="margin-top: 2rem;">
+  <h3>📐 캔버스 크기</h3>
+  <label>너비(px): <input type="number" id="canvasWidth" value="800" /></label><br />
+  <label>높이(px): <input type="number" id="canvasHeight" value="1130" /></label><br />
+  <button onclick="applyCanvasSize()">변경 적용</button>
+</div>
+      <div id="colorControls">
+        <h3>🎨 색상 설정</h3>
+        <label>배경색: <input type="color" id="fillColor" /></label><br />
+        <label>테두리색: <input type="color" id="strokeColor" /></label><br />
+        <label>투명도: <input type="range" id="opacity" min="0" max="1" step="0.01" /></label>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="editor-footer">
+    <label>제목: <input type="text" id="titleInput" /></label>
+    <label>커버 이미지 URL: <input type="text" id="coverInput" /></label>
+    <label>태그 (쉼표로 구분): <input type="text" id="tagsInput" /></label>
+    <label>대표 이미지 업로드: <input type="file" id="thumbnailInput" /></label>
+  </footer>
+
+  <script type="module" src="script/firebase-config.js"></script>
+  <script type="module" src="script/editor.js"></script>
+</body>
+</html>

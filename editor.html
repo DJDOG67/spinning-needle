@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spinning Needle Editor</title>
+  <link rel="stylesheet" href="style/main.css" />
+  <style>
+    .selected {
+      outline: 2px dashed #ff0055;
+    }
+    .editor-properties {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1rem;
+      width: 200px;
+      border-left: 1px solid #222;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="editor-header">
+    <h1>📝 매거진 작성</h1>
+    <button id="btnUndo">↩️ Undo</button>
+    <button id="btnRedo">↪️ Redo</button>
+    <button id="btnSave">💾 임시 저장</button>
+    <button id="btnPublish">✅ 발행</button>
+  </header>
+
+  <div class="editor-wrapper">
+    <!-- 툴바 -->
+    <aside class="editor-toolbar">
+      <button id="btnText">🅰 텍스트</button>
+      <button id="btnUpload">🖼 이미지 업로드</button>
+      <input type="file" id="imgUpload" accept="image/*" style="display: none;" />
+      <button id="btnLine">➖ 선</button>
+      <button id="btnRect">▭ 사각형</button>
+      <button id="btnCircle">⚪ 원</button>
+      <button id="btnTriangle">🔺 삼각형</button>
+      <button id="btnPolygon">⬠ 다각형</button>
+      <button id="btnDuplicate">📋 복사</button>
+      <button id="btnMusic">🎵 유튜브 음악 삽입</button>
+      <button onclick="addBackgroundMusic()">🎧 음악 추가</button>
+      <button onclick="addBackgroundMusic()">🎧 배경음악 추가</button>
+    </aside>
+
+    <!-- 캔버스 -->
+    <section class="editor-canvas" id="canvas">
+      <div class="canvas-area" id="editorContent" tabindex="0">
+        <!-- 요소 생성 위치 -->
+      </div>
+    </section>
+
+    <!-- 속성 패널 -->
+    <aside class="editor-properties" id="propertyPanel">
+      <div id="colorControls">
+        <h3>🎨 색상 설정</h3>
+        <label>배경색: <input type="color" id="fillColor" /></label><br />
+        <label>테두리색: <input type="color" id="strokeColor" /></label><br />
+        <label>투명도: <input type="range" id="opacity" min="0" max="1" step="0.01" /></label>
+        <h3>📐 캔버스 크기</h3>
+        <label>너비(px): <input type="number" id="canvasWidth" value="800" /></label><br />
+        <label>높이(px): <input type="number" id="canvasHeight" value="1130" /></label><br />
+      </div>
+        <div id="canvasBgControls" style="margin-top: 2rem;">
+        <h3>🖼 캔버스 배경</h3>
+       <label>배경색: <input type="color" id="canvasBgColor" value="#ffffff" /></label>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 푸터 -->
+  <footer class="editor-footer">
+    <label>제목: <input type="text" id="titleInput" /></label>
+    <label>커버 이미지 URL: <input type="text" id="coverInput" /></label>
+    <label>태그 (쉼표로 구분): <input type="text" id="tagsInput" /></label>
+    <label>대표 이미지 업로드: <input type="file" id="thumbnailInput" /></label>
+  </footer>
+
+  <!-- 외부 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <script type="module" src="script/firebase-config.js"></script>
+  <script type="module" src="script/editor.js"></script>
+
+  <!-- 스타일 반영 스크립트 -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const fillColor = document.getElementById("fillColor");
+      const strokeColor = document.getElementById("strokeColor");
+      const opacity = document.getElementById("opacity");
+
+      const updatePanelFromElement = (el) => {
+        if (!el) return;
+        if (el.tagName === "svg") {
+          const poly = el.querySelector("polygon");
+          if (poly) {
+            fillColor.value = rgbToHex(poly.getAttribute("fill") || "#cccccc");
+            strokeColor.value = rgbToHex(poly.getAttribute("stroke") || "#000000");
+          }
+        } else {
+          const style = getComputedStyle(el);
+          fillColor.value = rgbToHex(style.backgroundColor || "#ffffff");
+          strokeColor.value = rgbToHex(style.borderColor || "#000000");
+        }
+        opacity.value = el.style.opacity || 1;
+      };
+
+      function rgbToHex(rgb) {
+        const result = rgb.match(/\d+/g);
+        return result ? "#" + result.map(n => (+n).toString(16).padStart(2, "0")).join("") : "#ffffff";
+      }
+
+      document.getElementById("editorContent").addEventListener("click", (e) => {
+        const el = e.target.closest(".canvas-object");
+        if (!el) return;
+        document.querySelectorAll(".canvas-object").forEach(e => e.classList.remove("selected"));
+        el.classList.add("selected");
+        updatePanelFromElement(el);
+      });
+
+      fillColor?.addEventListener("input", (e) => {
+        const el = document.querySelector(".selected");
+        if (!el) return;
+        if (el.tagName === "svg") {
+          el.querySelector("polygon")?.setAttribute("fill", e.target.value);
+        } else {
+          el.style.backgroundColor = e.target.value;
+        }
+      });
+
+      strokeColor?.addEventListener("input", (e) => {
+        const el = document.querySelector(".selected");
+        if (!el) return;
+        if (el.tagName === "svg") {
+          el.querySelector("polygon")?.setAttribute("stroke", e.target.value);
+        } else {
+          el.style.border = `2px solid ${e.target.value}`;
+        }
+      });
+
+      opacity?.addEventListener("input", (e) => {
+        const el = document.querySelector(".selected");
+        if (el) el.style.opacity = e.target.value;
+      });
+    });
+  </script>
+  <!-- 🔐 로그인/회원가입 모달 -->
+<div id="authModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <h2 id="modalTitle">로그인</h2>
+
+    <input type="text" id="authUsername" placeholder="아이디 (닉네임)" />
+    <input type="password" id="authPassword" placeholder="비밀번호" />
+
+    <button class="btn-neon" onclick="handleAuth()">확인</button>
+    <p class="toggle-text">
+      계정이 없으신가요?
+      <span onclick="toggleAuthMode()">회원가입</span>
+    </p>
+
+    <p id="authMessage"></p>
+  </div>
+</div>
+
+</body>
+</html>

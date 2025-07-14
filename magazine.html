@@ -1,0 +1,41 @@
+// script/magazine.js
+import { db } from "./firebase-config.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+const container = document.getElementById("magazineContent");
+
+async function loadMagazine() {
+  if (!id) {
+    return showError("매거진 ID가 없습니다.");
+  }
+
+  const ref = doc(db, "magazines", id);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    return showError("매거진을 찾을 수 없습니다.");
+  }
+
+  const data = snap.data();
+  render(data);
+}
+
+function render(data) {
+  container.innerHTML = `
+    <div class="magazine-detail">
+      <img src="${data.cover || 'assets/img/default.jpg'}" alt="${data.title}" class="card-img" />
+      <h1>${data.title || '무제'}</h1>
+      <p class="curator">by ${data.curator || 'Unknown'}</p>
+      <div class="tags">${(data.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}</div>
+      <div class="canvas-render">${data.content || ''}</div>
+    </div>
+  `;
+}
+
+function showError(msg) {
+  container.innerHTML = `<p style="color: #ff0055;">${msg}</p>`;
+}
+
+loadMagazine();

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- ✅ Firebase CDN (compat 버전: 전역 객체 사용) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Spinning Needle</title>
+  <link rel="stylesheet" href="style/main.css">
+</head>
+<body>
+  <!-- 🌐 GNB (Global Navigation Bar) -->
+  <header class="gnb">
+    <div class="gnb-left">
+      <h1 class="logo">🎚️ Spinning Needle</h1>
+    </div>
+    <div class="gnb-center">
+      <!-- 로그인 전 -->
+      <div id="authButtons">
+<button class="btn-neon" id="loginBtn">LOGIN</button>
+<button class="btn-neon-outline" id="signupBtn">SIGN UP</button>
+      </div>
+      <!-- 로그인 후 -->
+      <div class="gnb-user hidden" id="userProfile">
+        <div class="user-toggle">
+          <img src="assets/img/profile_default.png" class="profile-img" />
+          <span id="userNickname">닉네임</span>
+        </div>
+        <div class="user-dropdown hidden" id="userMenu"></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="search-wrapper">
+      <input
+        type="text"
+        class="search-input"
+        id="searchInput"
+        placeholder="Dark Side of the Moon 비하인드"
+        oninput="handleSearch(this.value)"
+        onfocus="enableFocusMode()"
+        onblur="hideAutocomplete()"
+      />
+      <div class="autocomplete" id="autocomplete-list"></div>
+    </div>
+    <h1>Now Spinning</h1>
+    <img src="assets/img/sample-cover.jpg" alt="Album Cover" class="cover" />
+    <p class="comment">“소리 위에 남겨진 흔적”</p>
+    <div class="buttons">
+      <a href="#" class="btn">READ</a>
+      <a href="#" class="btn">LISTEN</a>
+    </div>
+  </section>
+
+  <section class="recommended">
+    <h2>추천 음반</h2>
+    <div class="dropdowns">
+      <div class="dropdown">
+        <button class="dropbtn">🎼 장르별</button>
+        <div class="dropdown-content">
+          <a href="#">Rock</a>
+          <a href="#">Jazz</a>
+          <a href="#">Soul</a>
+          <a href="#">Experimental</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">🕰 시대별</button>
+        <div class="dropdown-content">
+          <a href="#">60s</a>
+          <a href="#">70s</a>
+          <a href="#">80s</a>
+          <a href="#">Now</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">🌍 국가별</button>
+        <div class="dropdown-content">
+          <a href="#">USA</a>
+          <a href="#">UK</a>
+          <a href="#">Korea</a>
+          <a href="#">Japan</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="my-vault">
+    <h2>나의 창고</h2>
+    <div class="vault-section liked-artists">
+      <h3>❤️ 좋아요한 아티스트</h3>
+      <div class="artist-list">
+        <div class="artist">Radiohead</div>
+        <div class="artist">Miles Davis</div>
+        <div class="artist">Portishead</div>
+      </div>
+    </div>
+    <div class="vault-section saved-magazines">
+      <h3>📚 저장한 매거진</h3>
+      <div class="magazine-list">
+        <div class="magazine-card">Sun Ra의 재발견</div>
+        <div class="magazine-card">The Who: Quadrophenia</div>
+      </div>
+    </div>
+    <div class="vault-section activity-report">
+      <h3>📊 활동 리포트</h3>
+      <div class="report-cards">
+        <div class="report-card">
+          <div class="report-icon">💬</div>
+          <div class="report-number">12</div>
+          <div class="report-label">작성한 댓글</div>
+        </div>
+        <div class="report-card">
+          <div class="report-icon">❤️</div>
+          <div class="report-number">23</div>
+          <div class="report-label">좋아요한 매거진</div>
+        </div>
+        <div class="report-card">
+          <div class="report-icon">🎼</div>
+          <div class="report-number">Jazz, Psychedelic</div>
+          <div class="report-label">선호 장르</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="inside-music">
+    <h2>음악의 뒷이야기 🎙️</h2>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <h3>🎤 인터뷰</h3>
+        <p>“Sun Ra가 말하는 우주의 음악”<br>큐레이터 Hide_Kim과의 짧은 대화</p>
+        <a href="#" class="btn-mini">자세히 보기</a>
+      </div>
+      <div class="insight-card">
+        <h3>🎨 커버 아트 메이킹</h3>
+        <p>Quadrophenia의 앨범 커버 스케치와 미공개 콘셉트 아트</p>
+        <a href="#" class="btn-mini">보기</a>
+      </div>
+      <div class="insight-card video-card">
+        <h3>🎥 영상 아카이브</h3>
+        <iframe width="100%" height="200" src="https://www.youtube.com/embed/1LMSOfs10mA" title="YouTube video player" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
+  </section>
+
+  <section class="featured-curation">
+    <h2>🃏 오늘의 큐레이션</h2>
+    <div class="featured-card">
+      <img src="assets/img/sample-cover.jpg" alt="큐레이션 커버" />
+      <div class="card-info">
+        <h3>Velvet Underground – Noise is a Drug</h3>
+        <p>“도시의 소음 속에서 피어나는 무의식의 리듬”</p>
+      </div>
+    </div>
+    <a href="library.html" class="library-btn">
+      <span>ENTER</span> DIGITAL LIBRARY →
+    </a>
+  </section>
+
+  <!-- 📦 프로필 이미지 업로드 섹션 -->
+  <section class="profile-upload-section hidden" id="profileSection">
+    <h2>👤 프로필 이미지 등록</h2>
+    <div class="profile-box">
+      <label for="profileImageInput" class="upload-label">
+        <img id="previewImage" src="assets/img/profile_default.png" alt="미리보기" class="preview-img" />
+        <span class="upload-text">이미지 선택</span>
+      </label>
+      <input type="file" id="profileImageInput" accept="image/*" onchange="previewProfileImage()" />
+      <button onclick="saveProfileLocally()" class="btn-neon-outline">저장</button>
+    </div>
+  </section>
+
+  <a href="editor-canvas.html" id="writeBtn" class="write-button fancy-write" style="display: none;">
+    ✍️ 매거진 쓰기
+  </a>
+
+  <!-- 로그인/회원가입 모달 -->
+  <div id="authModal" class="modal hidden">
+    <div class="modal-glass">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle">로그인</h2>
+      <form id="authForm" onsubmit="handleAuth(event)">
+        <div class="input-group">
+          <input type="email" id="authUsername" placeholder="이메일 주소 (example@gmail.com)" required />
+        </div>
+        <div class="input-group">
+          <input type="password" id="authPassword" placeholder="비밀번호" required />
+        </div>
+        <button type="submit" class="btn-neon-wide">입장하기</button>
+      </form>
+      <p class="toggle-text">
+        <span onclick="toggleAuthMode()">회원가입 / 로그인 전환</span>
+      </p>
+      <p id="authMessage"></p>
+      <p class="resend-text">
+        인증 메일을 받지 못하셨나요?
+        <button type="button" onclick="resendVerificationEmail()" class="btn-neon-outline btn-small">재발송</button>
+      </p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    toggleAuthMode,
+    handleAuth,
+    firebaseLogout,
+    resendVerificationEmail,
+    saveProfileLocally
+  } from './script/login.js';
+
+  // 함수 선언
+  function showLogin() {
+    const modal = document.getElementById("authModal");
+    if (modal) {
+      modal.classList.remove("hidden");
+      const titleEl = document.getElementById("modalTitle");
+      if (titleEl) titleEl.textContent = "로그인";
+    }
+  }
+
+  function showSignup() {
+    const modal = document.getElementById("authModal");
+    if (modal) {
+      modal.classList.remove("hidden");
+      const titleEl = document.getElementById("modalTitle");
+      if (titleEl) titleEl.textContent = "회원가입";
+    }
+  }
+
+  function closeModal() {
+    const modal = document.getElementById("authModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  // 전역 등록
+  window.showLogin = showLogin;
+  window.showSignup = showSignup;
+  window.closeModal = closeModal;
+  window.toggleAuthMode = toggleAuthMode;
+  window.handleAuth = handleAuth;
+  window.firebaseLogout = firebaseLogout;
+  window.resendVerificationEmail = resendVerificationEmail;
+  window.saveProfileLocally = saveProfileLocally;
+
+  // 로그인 버튼 연결
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("loginBtn")?.addEventListener("click", showLogin);
+    document.getElementById("signupBtn")?.addEventListener("click", showSignup);
+  });
+
+  // 유저 메뉴 토글
+  document.addEventListener("DOMContentLoaded", () => {
+    const userToggle = document.querySelector(".user-toggle");
+    const userMenu = document.getElementById("userMenu");
+
+    if (userToggle && userMenu) {
+      userToggle.addEventListener("click", () => {
+        userMenu.classList.toggle("hidden");
+      });
+    }
+  });
+
+  // 바깥 클릭 시 드롭다운 닫기
+  document.addEventListener("click", (event) => {
+    const userToggle = document.querySelector(".user-toggle");
+    const userMenu = document.getElementById("userMenu");
+
+    if (!userToggle || !userMenu) return;
+    if (!userToggle.contains(event.target) && !userMenu.contains(event.target)) {
+      userMenu.classList.add("hidden");
+    }
+  });
+</script>
+
+
+
+</body>
+</html>
