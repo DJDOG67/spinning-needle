@@ -1,0 +1,27 @@
+name: 🔁 Update index.json in magazines
+
+on:
+  push:
+    paths:
+      - 'magazines/*.json'
+
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v3
+
+    - name: 🧾 Generate index.json
+      run: |
+        cd magazines
+        ls *.json | grep -v index.json | jq -R . | jq -s . > index.json
+
+    - name: 🔐 Commit and push index.json
+      run: |
+        git config --global user.email "bot@spinningneedle.io"
+        git config --global user.name "Spinning Needle Bot"
+        git add magazines/index.json
+        git commit -m "🔁 Auto-update index.json [CI]"
+        git push

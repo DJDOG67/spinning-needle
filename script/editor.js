@@ -1,347 +1,369 @@
-// script/editor.js
+// 🔧 script/editor.js — 모든 오류 수정 + 드래그 보정 + 텍스트 입력/선택 정비
 
-import { db } from "./firebase-config.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// 유튜브 ID 추출 함수 (전역 선언)
-function extractYouTubeID(url) {
-  const regex = /(?:youtube\.com.*[?&]v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
-}
-
-let selectedElement = null;
-let historyStack = [];
+let canvas = document.getElementById("canvas");
+let selectedEl = null;
+let copiedElData = null;
+let rotationMap = new Map();
+let isDragging = false;
+let isResizing = false;
+let offsetX = 0;
+let offsetY = 0;
+let resizeHandle = null;
+let originalWidth = 0;
+let originalHeight = 0;
+let startX = 0;
+let startY = 0;
+let undoStack = [];
 let redoStack = [];
 
-function addToCanvas(el) {
-  document.getElementById("editorContent").appendChild(el);
-  historyStack.push(el.outerHTML);
-  redoStack = [];
+
+function selectElement(el) {
+  if (selectedEl && selectedEl !== el) {
+    selectedEl.classList.remove("selected");
+    removeResizeHandle(selectedEl);
+  }
+  selectedEl = el;
+  el.classList.add("selected");
+  updatePropertiesPanel(el);
+  addResizeHandle(el);
 }
 
-window.makeSelectable = function (el) {
-  el.classList.add("canvas-object");
-  el.setAttribute("draggable", false);
-  el.style.position = 'absolute';
 
-  el.addEventListener("mousedown", () => {
-    document.querySelectorAll(".canvas-object").forEach(e => e.classList.remove("selected"));
-    selectedElement = el;
-    el.classList.add("selected");
-    updatePropertyPanel(el);
+function addShape() {
+  saveState();
+  const type = document.getElementById("shapeSelect").value;
+  const shape = document.createElement("div");
+  shape.className = `shape ${type}`;
+  shape.style.left = "100px";
+  shape.style.top = "100px";
+  shape.style.position = "absolute";
+  shape.style.width = "100px";
+  shape.style.height = "100px";
+  shape.setAttribute("tabindex", 0);
+  enableInteractions(shape);
+  canvas.appendChild(shape);
+  selectElement(shape);
+  saveState();
+}
+
+function addText() {
+  const text = document.createElement("div");
+  text.className = "text-block";
+  text.textContent = "더블클릭하여 텍스트 입력";
+  text.contentEditable = true;
+  text.style.position = "absolute";
+  text.style.left = "100px";
+  text.style.top = "100px";
+  enableInteractions(text);
+  canvas.appendChild(text);
+  selectElement(text);
+}
+
+function addImage() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.src = event.target.result;
+      img.className = "canvas-img";
+      img.style.position = "absolute";
+      img.style.left = "100px";
+      img.style.top = "100px";
+      enableInteractions(img);
+      canvas.appendChild(img);
+      selectElement(img);
+      saveState();
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function addVideo() {
+  const url = prompt("YouTube URL을 입력하세요:");
+  if (!url) return;
+  const iframe = document.createElement("iframe");
+  iframe.src = url.replace("watch?v=", "embed/");
+  iframe.width = "300";
+  iframe.height = "169"; // 16:9
+  iframe.style.position = "absolute";
+  iframe.style.left = "100px";
+  iframe.style.top = "100px";
+  enableInteractions(iframe);
+  canvas.appendChild(iframe);
+  selectElement(iframe);
+  saveState();
+}
+
+const coverInput = document.getElementById("coverUpload");
+coverInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    localStorage.setItem("coverImage", event.target.result);
+  };
+  reader.readAsDataURL(file);
+});
+
+function copyElement() {
+  if (!selectedEl) return;
+  copiedElData = selectedEl.cloneNode(true);
+}
+
+function pasteElement() {
+  if (!copiedElData) return;
+  const clone = copiedElData.cloneNode(true);
+  clone.style.left = parseInt(clone.style.left) + 20 + "px";
+  clone.style.top = parseInt(clone.style.top) + 20 + "px";
+  enableInteractions(clone);
+  canvas.appendChild(clone);
+  selectElement(clone);
+  saveState();
+}
+
+const deleteBtn = document.getElementById("btnDelete");
+deleteBtn.addEventListener("click", () => {
+if (selectedEl) {
+  selectedEl.remove();
+  selectedEl = null;
+  document.getElementById("properties").style.display = "none";
+  document.getElementById("noSelection").style.display = "block";
+  saveState();  // ✅ 추가
+}
+});
+
+function enableInteractions(el) {
+  el.setAttribute("tabindex", 0);
+
+  // 1️⃣ 더블클릭 시 입력 모드로 진입
+  el.addEventListener("dblclick", (e) => {
+    if (el.classList.contains("text-block")) {
+      el.contentEditable = true;
+      el.focus();
+      e.stopPropagation();
+    }
   });
 
-  interact(el)
-    .draggable({
-      listeners: {
-        move(event) {
-          const target = event.target;
-          const x = (parseFloat(target.getAttribute("data-x")) || 0) + event.dx;
-          const y = (parseFloat(target.getAttribute("data-y")) || 0) + event.dy;
-          const angle = parseFloat(target.getAttribute("data-rotate")) || 0;
-          target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-          target.setAttribute("data-x", x);
-          target.setAttribute("data-y", y);
-        }
-      }
-    })
-    .resizable({
-      edges: { left: true, right: true, bottom: true, top: true },
-      listeners: {
-        move(event) {
-          const target = event.target;
-          let x = parseFloat(target.getAttribute('data-x')) || 0;
-          let y = parseFloat(target.getAttribute('data-y')) || 0;
-          const angle = parseFloat(target.getAttribute("data-rotate")) || 0;
-          target.style.width = `${event.rect.width}px`;
-          target.style.height = `${event.rect.height}px`;
-          x += event.deltaRect.left;
-          y += event.deltaRect.top;
-          target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-          target.setAttribute('data-x', x);
-          target.setAttribute('data-y', y);
-        }
-      },
-      modifiers: [
-        interact.modifiers.restrictSize({
-          min: { width: 20, height: 20 },
-          max: { width: 1000, height: 1000 }
-        })
-      ]
-    });
-};
+  // 2️⃣ 드래그 가능하게 하되, 입력 중이면 막지 않음
+  el.addEventListener("mousedown", (e) => {
+    const isText = el.classList.contains("text-block");
 
-function updatePropertyPanel(el) {
-  const fill = document.getElementById("fillColor");
-  const stroke = document.getElementById("strokeColor");
-  const opacity = document.getElementById("opacity");
+    // 텍스트 드래그 중이면 드래그 금지
+    if (isText && !window.getSelection().isCollapsed) return;
 
-  if (!fill || !stroke || !opacity) return;
-
-  if (el.tagName.toLowerCase() === "svg") {
-    const poly = el.querySelector("polygon");
-    if (poly) {
-      fill.value = rgbToHex(poly.getAttribute("fill") || "#cccccc");
-      stroke.value = rgbToHex(poly.getAttribute("stroke") || "#333333");
+    // 텍스트인 경우: 단일 클릭 시 contentEditable 유지 (드래그는 계속 가능)
+    if (isText && el.contentEditable) {
+      // 단일 클릭인데 입력 중이면 드래그 금지
+      // 대신, 블러 처리 없이 두 번째 클릭 시 드래그 허용
+      setTimeout(() => {
+        el.contentEditable = false;
+      }, 0);
     }
-  } else {
-    const style = window.getComputedStyle(el);
-    fill.value = rgbToHex(style.backgroundColor);
-    stroke.value = rgbToHex(style.borderColor);
+
+    isDragging = true;
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    selectElement(el);
+    e.preventDefault();
+  });
+}
+
+
+canvas.addEventListener("mousedown", (e) => {
+  if (
+    selectedEl &&
+    selectedEl.classList.contains("text-block") &&
+    e.target !== selectedEl
+  ) {
+    selectedEl.blur();
+    selectedEl.contentEditable = false;
+    selectedEl.classList.remove("selected");
+    selectedEl = null;
   }
-  opacity.value = el.style.opacity || 1;
+});
+
+function addResizeHandle(el) {
+  removeResizeHandle(el);
+
+  el.style.position = "absolute";           // 🔥 필수
+  el.style.resize = "none";                // 기존 CSS resize 방지
+  el.style.overflow = "visible";           // 핸들이 잘리지 않게
+  el.style.zIndex = "1";                   // 기본값 보정
+  el.style.boxSizing = "border-box";       // 크기 정확도 향상
+  el.style.minWidth = "30px";
+  el.style.minHeight = "30px";
+
+  const handle = document.createElement("div");
+  handle.className = "resize-handle";
+  handle.style.position = "absolute";
+  handle.style.right = "0";
+  handle.style.bottom = "0";
+  handle.style.width = "12px";
+  handle.style.height = "12px";
+  handle.style.background = "#0ff";
+  handle.style.cursor = "se-resize";
+  handle.style.zIndex = "10";
+
+  handle.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+    isResizing = true;
+    resizeHandle = handle;
+    originalWidth = el.offsetWidth;
+    originalHeight = el.offsetHeight;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  el.appendChild(handle);
+}
+
+
+function removeResizeHandle(el) {
+  const existing = el.querySelector(".resize-handle");
+  if (existing) existing.remove();
+}
+
+document.addEventListener("mousemove", (e) => {
+  if (isResizing && selectedEl) {
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (e.shiftKey) {
+      const ratio = originalWidth / originalHeight;
+      let newWidth = originalWidth + dx;
+      let newHeight = newWidth / ratio;
+      selectedEl.style.width = newWidth + "px";
+      selectedEl.style.height = newHeight + "px";
+    } else {
+      selectedEl.style.width = originalWidth + dx + "px";
+      selectedEl.style.height = originalHeight + dy + "px";
+    }
+  } else if (isDragging && selectedEl) {
+    const canvasRect = canvas.getBoundingClientRect();
+    selectedEl.style.left = (e.clientX - canvasRect.left - offsetX) + "px";
+    selectedEl.style.top = (e.clientY - canvasRect.top - offsetY) + "px";
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  if (isResizing && selectedEl) {
+    selectedEl.style.width = selectedEl.offsetWidth + "px";
+    selectedEl.style.height = selectedEl.offsetHeight + "px";
+  }
+  isDragging = false;
+  isResizing = false;
+});
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+
+  if (e.ctrlKey && !e.shiftKey && key === "z") {
+    e.preventDefault();
+    undo();
+  }
+
+  if (e.ctrlKey && e.shiftKey && key === "z") {
+    e.preventDefault();
+    redo();
+  }
+
+  if (e.ctrlKey && key === "c") copyElement();
+  if (e.ctrlKey && key === "v") pasteElement();
+  if (key === "delete" && selectedEl) selectedEl.remove();
+
+  if (selectedEl && e.ctrlKey && (key === "arrowleft" || key === "arrowright")) {
+    let angle = rotationMap.get(selectedEl) || 0;
+    angle += key === "arrowleft" ? -5 : 5;
+    selectedEl.style.transform = `rotate(${angle}deg)`;
+    rotationMap.set(selectedEl, angle);
+  }
+});
+
+
+['bgColor', 'borderColor', 'borderWidth', 'opacityRange', 'gradStart', 'gradEnd'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', applyStyles);
+});
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(canvas.innerHTML);
+  const last = undoStack.pop();
+  canvas.innerHTML = last;
+  restoreInteractions();
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(canvas.innerHTML);
+  const last = redoStack.pop();
+  canvas.innerHTML = last;
+  restoreInteractions();
+}
+
+function saveState() {
+  undoStack.push(canvas.innerHTML);
+  redoStack = []; // 새로운 작업이 들어오면 redo 초기화
+}
+
+function restoreInteractions() {
+  [...canvas.children].forEach(el => {
+    enableInteractions(el);  // 다시 클릭/드래그/선택 기능 적용
+  });
+}
+
+function applyStyles() {
+  if (!selectedEl) return;
+  const bg = document.getElementById("bgColor").value;
+  const border = document.getElementById("borderColor").value;
+  const borderW = document.getElementById("borderWidth").value + "px";
+  const opacity = document.getElementById("opacityRange").value / 100;
+  const useGrad = document.getElementById("useGradient").checked;
+  const gradDir = document.getElementById("gradientDirection").value;
+  const gradStart = document.getElementById("gradStart").value;
+  const gradEnd = document.getElementById("gradEnd").value;
+
+  if (useGrad) {
+    selectedEl.style.background = `linear-gradient(${gradDir}, ${gradStart}, ${gradEnd})`;
+  } else {
+    selectedEl.style.background = bg;
+  }
+
+  selectedEl.style.borderColor = border;
+  selectedEl.style.borderStyle = "solid";
+  selectedEl.style.borderWidth = borderW;
+  selectedEl.style.opacity = opacity;
+}
+
+function updatePropertiesPanel(el) {
+  const panel = document.getElementById("properties");
+  const noSel = document.getElementById("noSelection");
+  panel.style.display = "block";
+  noSel.style.display = "none";
+
+  document.getElementById("bgColor").value = rgbToHex(getComputedStyle(el).backgroundColor);
+  document.getElementById("borderColor").value = rgbToHex(getComputedStyle(el).borderColor);
+  document.getElementById("borderWidth").value = parseInt(getComputedStyle(el).borderWidth) || 0;
+  document.getElementById("opacityRange").value = parseFloat(getComputedStyle(el).opacity) * 100;
 }
 
 function rgbToHex(rgb) {
-  const result = rgb.match(/\d+/g);
-  return result ? "#" + result.map(n => (+n).toString(16).padStart(2, "0")).join("") : "#ffffff";
+  if (!rgb || !rgb.startsWith("rgb")) return "#000000";
+  const [r, g, b] = rgb.match(/\d+/g);
+  return "#" + [r, g, b].map(x => (+x).toString(16).padStart(2, '0')).join("");
 }
 
-function addTextBox() {
-  const el = document.createElement("div");
-  el.className = "editor-text editable canvas-object";
-  el.contentEditable = true;
-  el.textContent = "텍스트 입력";
-  el.style.left = "100px";
-  el.style.top = "100px";
-  makeSelectable(el);
-  addToCanvas(el);
-}
-window.addTextBox = addTextBox;
-
-function addImage() {
-  const url = prompt("이미지 URL 입력:");
-  if (!url) return;
-  const el = document.createElement("img");
-  el.className = "editor-image canvas-object";
-  el.src = url;
-  el.style.left = "120px";
-  el.style.top = "100px";
-  makeSelectable(el);
-  addToCanvas(el);
-}
-window.addImage = addImage;
-
-function addShape(type) {
-  let el;
-  switch(type) {
-    case "line":
-      el = document.createElement("div");
-      el.className = "shape line";
-      el.style.width = "100px";
-      el.style.height = "2px";
-      el.style.background = "#333";
-      break;
-    case "rect":
-      el = document.createElement("div");
-      el.className = "shape rect";
-      el.style.width = "80px";
-      el.style.height = "60px";
-      el.style.background = "#eee";
-      break;
-    case "circle":
-      el = document.createElement("div");
-      el.className = "shape circle";
-      el.style.width = "60px";
-      el.style.height = "60px";
-      el.style.borderRadius = "50%";
-      el.style.background = "#eee";
-      break;
-    case "triangle":
-      el = document.createElement("div");
-      el.className = "shape triangle";
-      el.style.width = "0";
-      el.style.height = "0";
-      el.style.borderLeft = "40px solid transparent";
-      el.style.borderRight = "40px solid transparent";
-      el.style.borderBottom = "70px solid #eee";
-      break;
-    default:
-      el = document.createElement("div");
-      el.className = `shape ${type}`;
-  }
-  el.style.left = "150px";
-  el.style.top = "100px";
-  makeSelectable(el);
-  addToCanvas(el);
-}
+// 전역 등록
 window.addShape = addShape;
-
-function addPolygon() {
-  const sides = parseInt(prompt("변의 수 (3 이상):"));
-  if (isNaN(sides) || sides < 3) {
-    alert("3 이상이어야 합니다.");
-    return;
-  }
-  const size = 100;
-  const radius = size / 2;
-  const centerX = radius;
-  const centerY = radius;
-  const points = [];
-  for (let i = 0; i < sides; i++) {
-    const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
-    points.push(`${x},${y}`);
-  }
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("width", size);
-  svg.setAttribute("height", size);
-  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
-  svg.style.position = "absolute";
-  svg.style.left = "150px";
-  svg.style.top = "100px";
-  const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-  polygon.setAttribute("points", points.join(" "));
-  polygon.setAttribute("fill", "#ccc");
-  polygon.setAttribute("stroke", "#333");
-  polygon.setAttribute("stroke-width", "2");
-  svg.appendChild(polygon);
-  svg.classList.add("canvas-object");
-  makeSelectable(svg);
-  addToCanvas(svg);
-}
-window.addPolygon = addPolygon;
-
-window.applyCanvasSize = () => {
-  const w = parseInt(document.getElementById("canvasWidth").value);
-  const h = parseInt(document.getElementById("canvasHeight").value);
-  const canvas = document.getElementById("editorContent");
-  if (w > 100 && h > 100) {
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-  } else {
-    alert("너비와 높이는 최소 100px 이상이어야 합니다.");
-  }
-};
-
-window.addBackgroundMusic = function () {
-  const url = prompt("YouTube 영상 URL 입력:");
-  if (!url) return;
-  const videoId = extractYouTubeID(url);
-  if (!videoId) {
-    alert("유효한 YouTube URL이 아닙니다.");
-    return;
-  }
-
-  const iframe = document.createElement("iframe");
-  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=0`;
-  iframe.width = "0";
-  iframe.height = "0";
-  iframe.allow = "autoplay";
-  iframe.style.display = "none";
-  iframe.setAttribute("data-type", "bg-music");
-  document.getElementById("editorContent").appendChild(iframe);
-
-  const eq = document.createElement("div");
-  eq.className = "eq-visualizer";
-  eq.innerHTML = `
-    <svg width="60" height="40" viewBox="0 0 60 40">
-      <rect x="5" y="10" width="10" height="30" fill="#0cf">
-        <animate attributeName="height" values="5;30;10;25;5" dur="1s" repeatCount="indefinite" />
-      </rect>
-      <rect x="20" y="10" width="10" height="30" fill="#0cf">
-        <animate attributeName="height" values="30;5;20;10;30" dur="1s" repeatCount="indefinite" />
-      </rect>
-      <rect x="35" y="10" width="10" height="30" fill="#0cf">
-        <animate attributeName="height" values="10;25;5;30;10" dur="1s" repeatCount="indefinite" />
-      </rect>
-      <rect x="50" y="10" width="10" height="30" fill="#0cf">
-        <animate attributeName="height" values="20;5;30;10;25" dur="1s" repeatCount="indefinite" />
-      </rect>
-    </svg>`;
-  eq.style.position = "absolute";
-  eq.style.bottom = "10px";
-  eq.style.right = "10px";
-  eq.style.zIndex = "9999";
-
-  document.body.appendChild(eq);
-};
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnText")?.addEventListener("click", addTextBox);
-  document.getElementById("btnUpload")?.addEventListener("click", () => document.getElementById("imgUpload")?.click());
-  document.getElementById("btnLine")?.addEventListener("click", () => addShape("line"));
-  document.getElementById("btnRect")?.addEventListener("click", () => addShape("rect"));
-  document.getElementById("btnCircle")?.addEventListener("click", () => addShape("circle"));
-  document.getElementById("btnTriangle")?.addEventListener("click", () => addShape("triangle"));
-  document.getElementById("btnPolygon")?.addEventListener("click", addPolygon);
-  document.getElementById("canvasWidth")?.addEventListener("change", applyCanvasSize);
-  document.getElementById("canvasHeight")?.addEventListener("change", applyCanvasSize);
-
-  const fillColor = document.getElementById("fillColor");
-  const strokeColor = document.getElementById("strokeColor");
-  const opacity = document.getElementById("opacity");
-
-  fillColor?.addEventListener("input", (e) => {
-    const el = document.querySelector(".selected");
-    if (!el) return;
-    if (el.tagName.toLowerCase() === "svg") {
-      const poly = el.querySelector("polygon");
-      if (poly) poly.setAttribute("fill", e.target.value);
-    } else {
-      el.style.backgroundColor = e.target.value;
-    }
-  });
-
-  strokeColor?.addEventListener("input", (e) => {
-    const el = document.querySelector(".selected");
-    if (!el) return;
-    if (el.tagName.toLowerCase() === "svg") {
-      const poly = el.querySelector("polygon");
-      if (poly) poly.setAttribute("stroke", e.target.value);
-    } else {
-      el.style.border = `2px solid ${e.target.value}`;
-    }
-  });
-
-  opacity?.addEventListener("input", (e) => {
-    const el = document.querySelector(".selected");
-    if (el) el.style.opacity = e.target.value;
-  });
-
-  // 배경음악 버튼 이벤트
-  document.getElementById("btnMusic")?.addEventListener("click", () => {
-    const url = prompt("유튜브 영상 URL을 입력하세요:");
-    if (!url) return;
-
-    const videoId = extractYouTubeID(url);
-    if (!videoId) return alert("올바른 유튜브 링크가 아닙니다.");
-
-    const iframe = document.createElement("iframe");
-    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}`;
-    iframe.width = "320";
-    iframe.height = "180";
-    iframe.style.position = "absolute";
-    iframe.style.left = "50px";
-    iframe.style.top = "50px";
-    iframe.style.zIndex = "0";
-    iframe.classList.add("canvas-object");
-
-    makeSelectable(iframe);
-    addToCanvas(iframe);
-  });
-
-  // 캔버스 배경색 이벤트
-  const canvasBgColorInput = document.getElementById("canvasBgColor");
-  const canvas = document.getElementById("editorContent");
-  if (canvasBgColorInput && canvas) {
-    canvasBgColorInput.addEventListener("input", (e) => {
-      canvas.style.backgroundColor = e.target.value;
-    });
-  }
-});
-
-// 회전 기능
-document.addEventListener("keydown", (e) => {
-  if (!selectedElement || !e.ctrlKey) return;
-  let angle = parseFloat(selectedElement.getAttribute("data-rotate")) || 0;
-  if (e.key === "ArrowLeft") angle -= 5;
-  if (e.key === "ArrowRight") angle += 5;
-  selectedElement.setAttribute("data-rotate", angle);
-  const x = parseFloat(selectedElement.getAttribute("data-x")) || 0;
-  const y = parseFloat(selectedElement.getAttribute("data-y")) || 0;
-  selectedElement.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-  e.preventDefault();
-});
+window.addText = addText;
+window.addImage = addImage;
+window.addVideo = addVideo;
+window.copyElement = copyElement;
+window.pasteElement = pasteElement;

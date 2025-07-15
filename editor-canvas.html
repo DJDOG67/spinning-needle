@@ -1,78 +1,140 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- 꼭 <script type="module"> 위에 있어야 함 -->
-  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spinning Needle Editor</title>
-  <link rel="stylesheet" href="style/main.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📝 Spinning Needle - 에디터</title>
+  <link rel="stylesheet" href="style/editor.css">
+  <script type="module" src="script/editor.js"></script>
 </head>
 <body>
-  <script>
-  const role = localStorage.getItem("userRole");
-  if (role !== "curator" && role !== "admin") {
-    alert("⚠️ 이 페이지는 큐레이터만 접근할 수 있습니다.");
-    location.href = "index.html";
-  }
-</script>
-
+  <!-- 🧭 상단 제목 입력 -->
   <header class="editor-header">
-    <h1>📝 매거진 작성</h1>
-    <button onclick="saveDraft()">💾 임시 저장</button>
-    <button onclick="publishMagazine()">✅ 발행</button>
+    <input type="text" id="magazineTitle" placeholder="제목을 입력하세요" class="title-input" />
+    <div class="editor-actions">
+      <button id="btnUndo">↩️ Undo</button>
+      <button id="btnRedo">↪️ Redo</button>
+      <button id="btnDelete">❌ 삭제</button>
+      <button id="btnSave">💾 임시저장</button>
+      <button id="btnLoad">📂 불러오기</button>
+      <button id="btnPreview">🔍 미리보기</button>
+      <button id="btnPublish">🚀 Publish</button>
+    </div>
   </header>
 
-  <div class="editor-wrapper">
-    <!-- 🧰 툴바 -->
-    <aside class="editor-toolbar">
-      <button onclick="addTextBox()">🅰 텍스트</button>
-      <button onclick="addImage()">🖼 이미지</button>
-      <input type="file" id="imgUpload" accept="image/*" style="display: none;" />
-      <button onclick="addShape('line')">➖ 선</button>
-      <button onclick="addShape('rect')">▭ 사각형</button>
-      <button onclick="addShape('circle')">⚪ 원</button>
-      <button onclick="addShape('triangle')">🔺 삼각형</button>
-      <button onclick="addPolygon()">⬠ 다각형</button>
-      <button onclick="undoAction()">↩️ Undo</button>
-      <button onclick="redoAction()">↪️ Redo</button>
-      <button onclick="previewMagazine()">👁 프리뷰</button>
-    </aside>
+  <!-- 🎛️ 도구 툴바 -->
+  <section class="toolbar">
+    <select id="shapeSelect">
+      <option value="rect">사각형</option>
+      <option value="circle">원</option>
+      <option value="triangle">삼각형</option>
+      <option value="line">선</option>
+      <option value="polygon">다각형</option>
+    </select>
+    <button onclick="addShape()">➕ 도형 추가</button>
 
-    <!-- ✍️ 캔버스 영역 -->
-    <section class="editor-canvas" id="canvas">
-      <div class="canvas-area" id="editorContent" tabindex="0">
-        <!-- 요소들이 여기에 생성됨 -->
+    <button onclick="addText()">🔤 텍스트 추가</button>
+    <button onclick="addImage()">🖼️ 이미지 추가</button>
+    <button onclick="addVideo()">📹 YouTube 삽입</button>
+
+    <select id="musicType">
+      <option value="none">🎧 음악 추가</option>
+      <option value="spotify">Spotify 링크</option>
+      <option value="mp3">MP3 파일</option>
+    </select>
+    <input type="file" id="musicInput" accept="audio/*" style="display: none;" />
+
+    <button onclick="copyElement()">📄 복사</button>
+    <button onclick="pasteElement()">📋 붙여넣기</button>
+    <input type="file" id="coverUpload" accept="image/*" style="display:none" />
+    <button onclick="document.getElementById('coverUpload').click()">🎴 커버 이미지 선택</button>
+  </section>
+
+  <!-- 🖼️ 에디터 캔버스와 레이어 -->
+  <main class="editor-main">
+    <div id="canvasContainer">
+      <div id="canvas" contenteditable="false"></div>
+    </div>
+    <aside id="propertiesPanel">
+      <div id="noSelection">선택된 요소가 없습니다.</div>
+      <div id="properties" style="display: none;">
+        <label>배경색 <input type="color" id="bgColor"></label>
+        <label>테두리색 <input type="color" id="borderColor"></label>
+        <label>테두리 두께 <input type="range" id="borderWidth" min="0" max="10"></label>
+        <label>투명도 <input type="range" id="opacityRange" min="0" max="100"></label>
+        <label>그라데이션 적용 <input type="checkbox" id="useGradient"></label>
+        <label>그라데이션 시작 <input type="color" id="gradStart"></label>
+        <label>그라데이션 끝 <input type="color" id="gradEnd"></label>
+        <label>그라데이션 방향
+          <select id="gradientDirection">
+            <option value="to right">→</option>
+            <option value="to bottom">↓</option>
+            <option value="to left">←</option>
+            <option value="to top">↑</option>
+          </select>
+        </label>
+        <div id="textOptions" style="display:none">
+          <label>폰트 <select id="fontFamily">
+            <option value="sans-serif">Sans-serif</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+          </select></label>
+          <label>글자 크기 <input type="number" id="fontSize" min="8" max="72"></label>
+          <label><input type="checkbox" id="bold"> 굵게</label>
+          <label><input type="checkbox" id="italic"> 기울임</label>
+          <label><input type="checkbox" id="underline"> 밑줄</label>
+          <label><input type="checkbox" id="strike"> 취소선</label>
+          <label><input type="checkbox" id="verticalText"> 세로쓰기</label>
+        </div>
       </div>
-    </section>
-
-    <!-- 🎛️ 속성 패널 -->
-    <aside class="editor-properties" id="propertyPanel">
-      <div id="canvasSizeControls" style="margin-top: 2rem;">
-  <h3>📐 캔버스 크기</h3>
-  <label>너비(px): <input type="number" id="canvasWidth" value="800" /></label><br />
-  <label>높이(px): <input type="number" id="canvasHeight" value="1130" /></label><br />
-  <button onclick="applyCanvasSize()">변경 적용</button>
-</div>
-      <div id="colorControls">
-        <h3>🎨 색상 설정</h3>
-        <label>배경색: <input type="color" id="fillColor" /></label><br />
-        <label>테두리색: <input type="color" id="strokeColor" /></label><br />
-        <label>투명도: <input type="range" id="opacity" min="0" max="1" step="0.01" /></label>
-      </div>
     </aside>
-  </div>
+  </main>
 
-  <footer class="editor-footer">
-    <label>제목: <input type="text" id="titleInput" /></label>
-    <label>커버 이미지 URL: <input type="text" id="coverInput" /></label>
-    <label>태그 (쉼표로 구분): <input type="text" id="tagsInput" /></label>
-    <label>대표 이미지 업로드: <input type="file" id="thumbnailInput" /></label>
+  <!-- 🏷️ 하단 태그 설정 -->
+  <footer class="tag-footer">
+    <h3>📌 태그 설정 (모두 선택 필수)</h3>
+    <div class="tag-row">
+      <label>연도별:
+        <select id="tagYear">
+          <option value="60s">60년대</option>
+          <option value="70s">70년대</option>
+          <option value="80s">80년대</option>
+          <option value="90s">90년대</option>
+          <option value="00s">2000년대</option>
+          <option value="10s">2010년대</option>
+          <option value="20s">2020년대</option>
+        </select>
+      </label>
+      <label>국가별:
+        <select id="tagNation">
+          <option value="usa">USA</option>
+          <option value="uk">UK</option>
+          <option value="korea">Korea</option>
+          <option value="cuba">Cuba</option>
+          <option value="germany">Germany</option>
+        </select>
+      </label>
+      <label>종류:
+        <select id="tagType">
+          <option value="normal">일반매거진</option>
+          <option value="interview">인터뷰</option>
+          <option value="cover">커버 아트 메이킹</option>
+          <option value="video">영상 아카이브</option>
+        </select>
+      </label>
+      <label>장르:
+        <select id="tagGenre">
+          <option value="rock">Rock</option>
+          <option value="jazz">Jazz</option>
+          <option value="soul">Soul</option>
+          <option value="hiphop">HipHop</option>
+          <option value="psychedelic">Psychedelic</option>
+        </select>
+      </label>
+    </div>
   </footer>
-
-  <script type="module" src="script/firebase-config.js"></script>
+</body>
+</html><script type="module" src="script/firebase-config.js"></script>
   <script type="module" src="script/editor.js"></script>
 </body>
 </html>
